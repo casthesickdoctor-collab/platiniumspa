@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>POS - Venta rápida</title>
+  </head>
+  <body>
+    <h1>POS - Venta rápida</h1>
+
+    <form method="post">
+      {% csrf_token %}
+      <label>Producto:</label>
+      <select name="producto" required>
+        {% for p in productos %}
+          <option value="{{ p.id }}">{{ p.nombre }} - ${{ p.precio }}</option>
+        {% endfor %}
+      </select>
+
+      <label>Cantidad:</label>
+      <input type="number" name="cantidad" min="1" value="1" required>
+
+      <button type="submit">Crear venta</button>
+    </form>
+
+    <p><a href="/admin/">Ir al Admin</a></p>
+  </body>
+</html>
