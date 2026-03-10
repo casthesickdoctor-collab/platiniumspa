@@ -3,47 +3,324 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>POS - Venta rápida</title>
+    <title>POS</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f3f4f6;
+        color: #111827;
+      }
+
+      .topbar {
+        background: #111827;
+        color: white;
+        padding: 14px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .topbar a {
+        color: white;
+        text-decoration: none;
+        margin-right: 12px;
+      }
+
+      .contenedor {
+        padding: 16px;
+      }
+
+      .mensajes {
+        margin-bottom: 12px;
+      }
+
+      .mensaje {
+        padding: 10px 12px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        background: #e5e7eb;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 16px;
+      }
+
+      .panel {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+      }
+
+      .productos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+        max-height: 72vh;
+        overflow: auto;
+      }
+
+      .producto-form {
+        margin: 0;
+      }
+
+      .producto-boton {
+        width: 100%;
+        min-height: 130px;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        padding: 8px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: bold;
+        background-color: #0a8f08;
+      }
+
+      .producto-boton img {
+        width: 100%;
+        height: 70px;
+        object-fit: cover;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      .sin-imagen {
+        width: 100%;
+        height: 70px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+      }
+
+      .producto-nombre {
+        font-size: 13px;
+        text-align: center;
+        margin-top: 6px;
+      }
+
+      .producto-precio {
+        font-size: 13px;
+        margin-top: 4px;
+      }
+
+      .cliente-box {
+        background: #eef2ff;
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 14px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 8px;
+        text-align: left;
+        font-size: 14px;
+      }
+
+      .acciones {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      .btn {
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      .btn-rojo {
+        background: #dc2626;
+        color: white;
+      }
+
+      .btn-verde {
+        background: #16a34a;
+        color: white;
+      }
+
+      .btn-gris {
+        background: #d1d5db;
+        color: #111827;
+      }
+
+      .total {
+        margin-top: 14px;
+        font-size: 22px;
+        font-weight: bold;
+      }
+
+      .metodo-pago {
+        margin-top: 12px;
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .productos-grid {
+          max-height: none;
+        }
+      }
+    </style>
   </head>
   <body>
-    <h1>POS - Venta rápida</h1>
+    <div class="topbar">
+      <div><strong>POS / Venta directa</strong></div>
+      <div>
+        <a href="/scan/">Escanear QR</a>
+        <a href="/reportes/ventas/">Reportes</a>
+        <a href="/admin/">Admin</a>
+      </div>
+    </div>
 
-    {% if cliente %}
-      <p><strong>Cliente seleccionado:</strong> {{ cliente.nombre }}</p>
-      <p><a href="/clientes/{{ cliente.id }}/qr-page/" target="_blank">Ver QR del cliente</a></p>
-    {% else %}
-      <p><strong>No hay cliente seleccionado.</strong></p>
-    {% endif %}
+    <div class="contenedor">
+      {% if messages %}
+        <div class="mensajes">
+          {% for message in messages %}
+            <div class="mensaje">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
 
-    {% if productos %}
-      <form method="post">
-        {% csrf_token %}
+      <div class="layout">
+        <div class="panel">
+          <h2>Productos</h2>
 
-        {% if cliente %}
-          <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
-        {% endif %}
+          <div class="productos-grid">
+            {% for producto in productos %}
+              <form method="post" class="producto-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_product">
+                <input type="hidden" name="producto_id" value="{{ producto.id }}">
 
-        <p>
-          <label>Producto:</label><br>
-          <select name="producto" required>
-            {% for p in productos %}
-              <option value="{{ p.id }}">{{ p.nombre }} - ${{ p.precio }}</option>
+                <button
+                  type="submit"
+                  class="producto-boton"
+                  data-color="{{ producto.color_pos }}"
+                >
+                  {% if producto.imagen %}
+                    <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}">
+                  {% else %}
+                    <div class="sin-imagen">Sin imagen</div>
+                  {% endif %}
+
+                  <div class="producto-nombre">{{ producto.nombre }}</div>
+                  <div class="producto-precio">${{ producto.precio }}</div>
+                </button>
+              </form>
+            {% empty %}
+              <p>No hay productos activos visibles en el POS.</p>
             {% endfor %}
-          </select>
-        </p>
+          </div>
+        </div>
 
-        <p>
-          <label>Cantidad:</label><br>
-          <input type="number" name="cantidad" min="1" value="1" required>
-        </p>
+        <div class="panel">
+          <h2>Venta actual</h2>
 
-        <button type="submit">Crear venta</button>
-      </form>
-    {% else %}
-      <p>No hay productos activos cargados.</p>
-    {% endif %}
+          {% if cliente %}
+            <div class="cliente-box">
+              <strong>Cliente:</strong> {{ cliente.nombre }}<br>
+              <a href="/pos/?sin_cliente=1">Quitar cliente</a>
+            </div>
+          {% else %}
+            <div class="cliente-box">
+              <strong>Sin cliente seleccionado</strong><br>
+              <a href="/scan/">Escanear manilla QR</a>
+            </div>
+          {% endif %}
 
-    <p><a href="/scan/">Escanear manilla QR</a></p>
-    <p><a href="/admin/">Ir al admin</a></p>
+          <table>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cant.</th>
+                <th>Subtotal</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in cart_items %}
+                <tr>
+                  <td>{{ item.producto.nombre }}</td>
+                  <td>{{ item.cantidad }}</td>
+                  <td>${{ item.subtotal }}</td>
+                  <td>
+                    <form method="post" style="margin: 0;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="remove_item">
+                      <input type="hidden" name="producto_id" value="{{ item.producto.id }}">
+                      <button type="submit" class="btn btn-gris">Quitar</button>
+                    </form>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4">No hay productos cargados en la venta.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div class="total">Total: ${{ total_carrito }}</div>
+
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="confirm_sale">
+
+            <div class="metodo-pago">
+              <label><strong>Método de pago:</strong></label><br>
+              <select name="metodo_pago">
+                {% for valor, etiqueta in metodos_pago %}
+                  <option value="{{ valor }}">{{ etiqueta }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="acciones">
+              <button type="submit" class="btn btn-verde">Confirmar venta</button>
+            </div>
+          </form>
+
+          <form method="post" style="margin-top: 10px;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="clear_cart">
+            <button type="submit" class="btn btn-rojo">Anular / limpiar venta</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.querySelectorAll(".producto-boton").forEach(function (boton) {
+        const color = boton.dataset.color;
+        if (color && color.trim() !== "") {
+          boton.style.backgroundColor = color;
+        }
+      });
+    </script>
   </body>
 </html>

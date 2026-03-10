@@ -3,6 +3,20 @@ import uuid
 from django.db import models
 
 
+class CategoriaProducto(models.Model):
+    nombre = models.CharField(max_length=100)
+    orden = models.PositiveIntegerField(default=0)
+    activa = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["orden", "nombre"]
+        verbose_name = "Categoría"
+        verbose_name_plural = "Categorías"
+
+    def __str__(self):
+        return self.nombre
+
+
 class Cliente(models.Model):
     nombre = models.CharField(max_length=150)
     documento = models.CharField(max_length=50, blank=True)
@@ -23,11 +37,28 @@ class Cliente(models.Model):
 
 
 class Producto(models.Model):
+    categoria = models.ForeignKey(
+        CategoriaProducto,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="productos",
+    )
     nombre = models.CharField(max_length=150)
     sku = models.CharField(max_length=60, blank=True)
+    descripcion = models.TextField(blank=True)
     precio = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     stock = models.IntegerField(default=0)
+    controlar_stock = models.BooleanField(default=False)
     activo = models.BooleanField(default=True)
+
+    mostrar_en_pos = models.BooleanField(default=True)
+    orden_pos = models.PositiveIntegerField(default=0)
+    color_pos = models.CharField(max_length=20, blank=True, default="#0a8f08")
+    imagen = models.ImageField(upload_to="productos/", blank=True, null=True)
+
+    class Meta:
+        ordering = ["orden_pos", "nombre"]
 
     def __str__(self):
         return self.nombre

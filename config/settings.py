@@ -126,3 +126,8 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 PUBLIC_BASE_URL = "https://potential-tribble-r456q4jqg46724wj-8000.app.github.dev/"
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+PUBLIC_BASE_URL = "https://TU-CODESPACE-8000.app.github.dev"

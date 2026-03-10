@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reportes de ventas</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        background: #f3f4f6;
+        color: #111827;
+      }
+
+      .topbar {
+        background: #111827;
+        color: white;
+        padding: 14px 18px;
+      }
+
+      .topbar a {
+        color: white;
+        text-decoration: none;
+        margin-right: 12px;
+      }
+
+      .contenedor {
+        padding: 16px;
+      }
+
+      .panel {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        margin-bottom: 16px;
+      }
+
+      .resumen {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .card {
+        background: #eef2ff;
+        border-radius: 10px;
+        padding: 16px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        padding: 10px;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+      }
+
+      @media (max-width: 700px) {
+        .resumen {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <strong>Reportes de ventas</strong><br>
+      <a href="/pos/">POS</a>
+      <a href="/admin/">Admin</a>
+    </div>
+
+    <div class="contenedor">
+      <div class="panel">
+        <form method="get">
+          <label>Desde:</label>
+          <input type="date" name="desde" value="{{ desde|date:'Y-m-d' }}">
+
+          <label>Hasta:</label>
+          <input type="date" name="hasta" value="{{ hasta|date:'Y-m-d' }}">
+
+          <button type="submit">Filtrar</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div class="resumen">
+          <div class="card">
+            <strong>Total vendido</strong><br>
+            ${{ resumen.total|default:"0.00" }}
+          </div>
+          <div class="card">
+            <strong>Cantidad de ventas</strong><br>
+            {{ resumen.cantidad|default:"0" }}
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Ventas por día</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Ventas</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for fila in ventas_por_dia %}
+              <tr>
+                <td>{{ fila.fecha }}</td>
+                <td>{{ fila.cantidad }}</td>
+                <td>${{ fila.total }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3">No hay ventas en ese rango.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h2>Ventas por método de pago</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Método</th>
+              <th>Ventas</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for fila in ventas_por_pago %}
+              <tr>
+                <td>{{ fila.metodo_pago }}</td>
+                <td>{{ fila.cantidad }}</td>
+                <td>${{ fila.total }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3">No hay datos.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h2>Productos vendidos</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Unidades</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for fila in ventas_por_producto %}
+              <tr>
+                <td>{{ fila.producto__nombre }}</td>
+                <td>{{ fila.unidades }}</td>
+                <td>${{ fila.total }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3">No hay productos vendidos en ese rango.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import HttpResponse
 from django.urls import path
@@ -19,4 +21,8 @@ urlpatterns = [
     path("scan/<str:token>/", views.scan_qr_token, name="scan_qr_token"),
     path("clientes/<int:cliente_id>/qr/", views.cliente_qr, name="cliente_qr"),
     path("clientes/<int:cliente_id>/qr-page/", views.cliente_qr_page, name="cliente_qr_page"),
+    path("reportes/ventas/", views.reportes_ventas, name="reportes_ventas"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
