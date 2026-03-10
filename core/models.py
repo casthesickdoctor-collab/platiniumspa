@@ -1,4 +1,5 @@
 from decimal import Decimal
+import uuid
 from django.db import models
 
 
@@ -9,7 +10,13 @@ class Cliente(models.Model):
     email = models.EmailField(blank=True)
     notas = models.TextField(blank=True)
     activo = models.BooleanField(default=True)
+    qr_token = models.CharField(max_length=36, unique=True, null=True, blank=True, editable=False)
     creado_en = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.qr_token:
+            self.qr_token = str(uuid.uuid4())
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.nombre
@@ -68,11 +75,9 @@ class VentaItem(models.Model):
         if self.precio_unitario in (None, Decimal("0.00")):
             self.precio_unitario = self.producto.precio
         super().save(*args, **kwargs)
-        # Actualiza total de la venta cada vez que se guarda un ítem
         self.venta.recalcular_total()
 
     def delete(self, *args, **kwargs):
         venta = self.venta
         super().delete(*args, **kwargs)
-        # Actualiza total si borran un ítem
         venta.recalcular_total()

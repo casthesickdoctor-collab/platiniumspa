@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QR de cliente</title>
+  </head>
+  <body>
+    <h1>{{ cliente.nombre }}</h1>
+
+    <p><strong>QR del cliente</strong></p>
+    <p>
+      <img src="/clientes/{{ cliente.id }}/qr/" alt="QR de {{ cliente.nombre }}">
+    </p>
+
+    <p><strong>Codigo interno:</strong> {{ cliente.qr_token }}</p>
+    <p><strong>Enlace del QR:</strong> {{ qr_url }}</p>
+
+    <button onclick="window.print()">Imprimir</button>
+    <p><a href="/admin/core/cliente/{{ cliente.id }}/change/">Volver al cliente</a></p>
+  </body>
+</html>

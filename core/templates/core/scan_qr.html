@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Escanear QR</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  </head>
+  <body>
+    <h1>Escanear manilla QR</h1>
+
+    <p>Si quieres usar la cámara desde esta página, toca el botón de abajo.</p>
+    <p>Si estás en iPhone, prueba primero abriendo esta página en Safari o Chrome.</p>
+
+    <p>
+      <button type="button" id="start-camera">Usar cámara</button>
+      <button type="button" id="stop-camera" style="display:none;">Detener cámara</button>
+    </p>
+
+    <p id="scan-status"></p>
+
+    <div id="reader" style="width: 100%; max-width: 420px;"></div>
+
+    <hr>
+
+    <p>También puedes pegar aquí la URL o el código.</p>
+
+    {% if error %}
+      <p style="color: red;"><strong>{{ error }}</strong></p>
+    {% endif %}
+
+    <form method="post" id="scan-form">
+      {% csrf_token %}
+      <input
+        type="text"
+        name="token"
+        id="token-input"
+        autofocus
+        required
+        style="width: 320px;"
+      >
+      <button type="submit">Buscar cliente</button>
+    </form>
+
+    <p><a href="/pos/">Volver al POS</a></p>
+
+    <script>
+      const tokenInput = document.getElementById("token-input");
+      const scanForm = document.getElementById("scan-form");
+      const statusEl = document.getElementById("scan-status");
+      const startBtn = document.getElementById("start-camera");
+      const stopBtn = document.getElementById("stop-camera");
+
+      let scanner = null;
+      let cameraRunning = false;
+
+      function normalizarQr(valor) {
+        if (!valor) return "";
+        valor = valor.trim();
+
+        const marker = "/scan/";
+        const idx = valor.indexOf(marker);
+        if (idx !== -1) {
+          valor = valor.substring(idx + marker.length);
+        }
+
+        return valor.replace(/^\/+|\/+$/g, "");
+      }
+
+      function enviarCodigo(valor) {
+        tokenInput.value = normalizarQr(valor);
+        statusEl.textContent = "Código detectado. Buscando cliente...";
+        scanForm.submit();
+      }
+
+      async function iniciarCamara() {
+        if (!scanner) {
+          scanner = new Html5Qrcode("reader");
+        }
+
+        statusEl.textContent = "Solicitando permiso para usar la cámara...";
+
+        try {
+          await scanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText) => {
+              if (cameraRunning) {
+                cameraRunning = false;
+                scanner.stop().catch(() => {});
+              }
+              enviarCodigo(decodedText);
+            },
+            () => {
+              // ignorar errores de lectura mientras sigue buscando
+            }
+          );
+
+          cameraRunning = true;
+          startBtn.style.display = "none";
+          stopBtn.style.display = "inline-block";
+          statusEl.textContent = "Apunta la cámara al QR.";
+        } catch (error) {
+          console.error(error);
+          statusEl.textContent =
+            "No pude abrir la cámara. Puedes usar la cámara del iPhone o pegar el código manualmente.";
+        }
+      }
+
+      async function detenerCamara() {
+        if (scanner && cameraRunning) {
+          await scanner.stop().catch(() => {});
+          cameraRunning = false;
+        }
+
+        startBtn.style.display = "inline-block";
+        stopBtn.style.display = "none";
+        statusEl.textContent = "Cámara detenida.";
+      }
+
+      startBtn.addEventListener("click", iniciarCamara);
+      stopBtn.addEventListener("click", detenerCamara);
+    </script>
+  </body>
+</html>

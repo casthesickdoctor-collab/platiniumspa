@@ -1,27 +1,49 @@
 <!doctype html>
-<html>
+<html lang="es">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>POS - Venta rápida</title>
   </head>
   <body>
     <h1>POS - Venta rápida</h1>
 
-    <form method="post">
-      {% csrf_token %}
-      <label>Producto:</label>
-      <select name="producto" required>
-        {% for p in productos %}
-          <option value="{{ p.id }}">{{ p.nombre }} - ${{ p.precio }}</option>
-        {% endfor %}
-      </select>
+    {% if cliente %}
+      <p><strong>Cliente seleccionado:</strong> {{ cliente.nombre }}</p>
+      <p><a href="/clientes/{{ cliente.id }}/qr-page/" target="_blank">Ver QR del cliente</a></p>
+    {% else %}
+      <p><strong>No hay cliente seleccionado.</strong></p>
+    {% endif %}
 
-      <label>Cantidad:</label>
-      <input type="number" name="cantidad" min="1" value="1" required>
+    {% if productos %}
+      <form method="post">
+        {% csrf_token %}
 
-      <button type="submit">Crear venta</button>
-    </form>
+        {% if cliente %}
+          <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
+        {% endif %}
 
-    <p><a href="/admin/">Ir al Admin</a></p>
+        <p>
+          <label>Producto:</label><br>
+          <select name="producto" required>
+            {% for p in productos %}
+              <option value="{{ p.id }}">{{ p.nombre }} - ${{ p.precio }}</option>
+            {% endfor %}
+          </select>
+        </p>
+
+        <p>
+          <label>Cantidad:</label><br>
+          <input type="number" name="cantidad" min="1" value="1" required>
+        </p>
+
+        <button type="submit">Crear venta</button>
+      </form>
+    {% else %}
+      <p>No hay productos activos cargados.</p>
+    {% endif %}
+
+    <p><a href="/scan/">Escanear manilla QR</a></p>
+    <p><a href="/admin/">Ir al admin</a></p>
   </body>
 </html>
