@@ -25,13 +25,18 @@ SECRET_KEY = "django-insecure-e%^l4v+i#t2d%gmqg7w0ut2t@uomvqb=o-t4^5p8wip*t(nk^t
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ALLOWED_HOSTS = [
+ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     ".app.github.dev",
     ".githubpreview.dev",
 ]
+
 CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "https://localhost:8000",
+    "http://127.0.0.1:8000",
+    "https://127.0.0.1:8000",
     "https://*.app.github.dev",
     "https://*.githubpreview.dev",
 ]
@@ -125,9 +130,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
-PUBLIC_BASE_URL = "https://potential-tribble-r456q4jqg46724wj-8000.app.github.dev/"
-
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-PUBLIC_BASE_URL = "https://TU-CODESPACE-8000.app.github.dev"
+PUBLIC_BASE_URL = "https://potential-tribble-r456q4jqg46724wj-8000.app.github.dev"
