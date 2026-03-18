@@ -1,326 +1,530 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>POS</title>
+<head>
+    <meta charset="UTF-8">
+    <title>POS / Venta directa</title>
     <style>
-      body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: #f3f4f6;
-        color: #111827;
-      }
+        :root {
+            --color-primario:
+                {% if config_sitio and config_sitio.color_primario %}
+                    {{ config_sitio.color_primario }}
+                {% else %}
+                    #0f172a
+                {% endif %};
+            --color-secundario:
+                {% if config_sitio and config_sitio.color_secundario %}
+                    {{ config_sitio.color_secundario }}
+                {% else %}
+                    #1d4ed8
+                {% endif %};
+        }
 
-      .topbar {
-        background: #111827;
-        color: white;
-        padding: 14px 18px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
+        * {
+            box-sizing: border-box;
+        }
 
-      .topbar a {
-        color: white;
-        text-decoration: none;
-        margin-right: 12px;
-      }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #dcdde1;
+            color: #111827;
+        }
 
-      .contenedor {
-        padding: 16px;
-      }
+        .topbar {
+            background: var(--color-primario);
+            color: white;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
 
-      .mensajes {
-        margin-bottom: 12px;
-      }
+        .topbar a {
+            color: white;
+            text-decoration: none;
+            margin-left: 18px;
+            font-weight: normal;
+        }
 
-      .mensaje {
-        padding: 10px 12px;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        background: #e5e7eb;
-      }
-
-      .layout {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 16px;
-      }
-
-      .panel {
-        background: white;
-        border-radius: 12px;
-        padding: 16px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-      }
-
-      .productos-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 10px;
-        max-height: 72vh;
-        overflow: auto;
-      }
-
-      .producto-form {
-        margin: 0;
-      }
-
-      .producto-boton {
-        width: 100%;
-        min-height: 130px;
-        border: none;
-        border-radius: 10px;
-        color: white;
-        padding: 8px;
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        align-items: center;
-        font-weight: bold;
-        background-color: #0a8f08;
-      }
-
-      .producto-boton img {
-        width: 100%;
-        height: 70px;
-        object-fit: cover;
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.18);
-      }
-
-      .sin-imagen {
-        width: 100%;
-        height: 70px;
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.15);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-      }
-
-      .producto-nombre {
-        font-size: 13px;
-        text-align: center;
-        margin-top: 6px;
-      }
-
-      .producto-precio {
-        font-size: 13px;
-        margin-top: 4px;
-      }
-
-      .cliente-box {
-        background: #eef2ff;
-        padding: 12px;
-        border-radius: 10px;
-        margin-bottom: 14px;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 12px;
-      }
-
-      th,
-      td {
-        border-bottom: 1px solid #e5e7eb;
-        padding: 8px;
-        text-align: left;
-        font-size: 14px;
-      }
-
-      .acciones {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        margin-top: 14px;
-      }
-
-      .btn {
-        border: none;
-        border-radius: 8px;
-        padding: 10px 14px;
-        cursor: pointer;
-        font-weight: bold;
-      }
-
-      .btn-rojo {
-        background: #dc2626;
-        color: white;
-      }
-
-      .btn-verde {
-        background: #16a34a;
-        color: white;
-      }
-
-      .btn-gris {
-        background: #d1d5db;
-        color: #111827;
-      }
-
-      .total {
-        margin-top: 14px;
-        font-size: 22px;
-        font-weight: bold;
-      }
-
-      .metodo-pago {
-        margin-top: 12px;
-      }
-
-      @media (max-width: 900px) {
         .layout {
-          grid-template-columns: 1fr;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 14px;
+            padding: 14px;
+        }
+
+        .panel {
+            background: #efefef;
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .panel h2 {
+            margin-top: 0;
+            font-size: 22px;
         }
 
         .productos-grid {
-          max-height: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
         }
-      }
+
+        .producto-card {
+            width: 118px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #16a34a;
+            color: white;
+            text-align: center;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .producto-card .img-wrap {
+            background: white;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px;
+        }
+
+        .producto-card img {
+            max-width: 100%;
+            max-height: 58px;
+            object-fit: contain;
+        }
+
+        .producto-card .sin-imagen {
+            font-size: 12px;
+            color: #374151;
+            font-weight: bold;
+        }
+
+        .producto-card .contenido {
+            padding: 8px 6px 10px;
+        }
+
+        .producto-card .nombre {
+            min-height: 38px;
+            font-size: 13px;
+            line-height: 1.15;
+        }
+
+        .producto-card .precio {
+            margin-top: 4px;
+            font-size: 14px;
+        }
+
+        .venta-actual {
+            background: #efefef;
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .info-box {
+            background: #dfe3f3;
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+        }
+
+        .info-box a {
+            color: #4c1d95;
+        }
+
+        .mensajes {
+            margin-bottom: 12px;
+        }
+
+        .mensaje {
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .mensaje.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .mensaje.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .mensaje.info {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 14px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 9px 6px;
+            border-bottom: 1px solid #d1d5db;
+            vertical-align: top;
+            font-size: 14px;
+        }
+
+        .linea-form {
+            display: grid;
+            grid-template-columns: 70px 90px auto auto;
+            gap: 6px;
+            margin-top: 6px;
+            align-items: center;
+        }
+
+        .linea-form input[type="number"] {
+            width: 100%;
+            padding: 6px;
+        }
+
+        .linea-form label {
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-guardar {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-quitar {
+            background: #d1d5db;
+            color: #111827;
+        }
+
+        .btn-confirmar {
+            background: #16a34a;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn-limpiar {
+            background: #ef4444;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .resumen-box {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #d1d5db;
+        }
+
+        .resumen-linea {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 15px;
+        }
+
+        .total-final {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .descuentos-form {
+            margin-top: 14px;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 10px;
+        }
+
+        .descuentos-form .fila {
+            margin-bottom: 10px;
+        }
+
+        .descuentos-form label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .descuentos-form input,
+        .descuentos-form select {
+            width: 100%;
+            padding: 8px;
+        }
+
+        .acciones-finales {
+            margin-top: 14px;
+        }
+
+        .muted {
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #f59e0b;
+            color: white;
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 980px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .linea-form {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div class="topbar">
-      <div><strong>POS / Venta directa</strong></div>
-      <div>
-        <a href="/scan/">Escanear QR</a>
-        <a href="/reportes/ventas/">Reportes</a>
-        <a href="/admin/">Admin</a>
-      </div>
+        <div>POS / Venta directa</div>
+        <div>
+            <a href="/scan/">Escanear QR</a>
+            <a href="/reportes/ventas/">Reportes</a>
+            <a href="/admin/">Admin</a>
+        </div>
     </div>
 
-    <div class="contenedor">
-      {% if messages %}
-        <div class="mensajes">
-          {% for message in messages %}
-            <div class="mensaje">{{ message }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-
-      <div class="layout">
+    <div class="layout">
         <div class="panel">
-          <h2>Productos</h2>
+            <h2>Productos</h2>
 
-          <div class="productos-grid">
-            {% for producto in productos %}
-              <form method="post" class="producto-form">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="add_product">
-                <input type="hidden" name="producto_id" value="{{ producto.id }}">
+            <div class="productos-grid">
+                {% for producto in productos %}
+                    <form method="post" style="margin:0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_product">
+                        <input type="hidden" name="producto_id" value="{{ producto.id }}">
 
-                <button
-                  type="submit"
-                  class="producto-boton"
-                  data-color="{{ producto.color_pos }}"
-                >
-                  {% if producto.imagen %}
-                    <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}">
-                  {% else %}
-                    <div class="sin-imagen">Sin imagen</div>
-                  {% endif %}
-
-                  <div class="producto-nombre">{{ producto.nombre }}</div>
-                  <div class="producto-precio">${{ producto.precio }}</div>
-                </button>
-              </form>
-            {% empty %}
-              <p>No hay productos activos visibles en el POS.</p>
-            {% endfor %}
-          </div>
-        </div>
-
-        <div class="panel">
-          <h2>Venta actual</h2>
-
-          {% if cliente %}
-            <div class="cliente-box">
-              <strong>Cliente:</strong> {{ cliente.nombre }}<br>
-              <a href="/pos/?sin_cliente=1">Quitar cliente</a>
-            </div>
-          {% else %}
-            <div class="cliente-box">
-              <strong>Sin cliente seleccionado</strong><br>
-              <a href="/scan/">Escanear manilla QR</a>
-            </div>
-          {% endif %}
-
-          <table>
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Cant.</th>
-                <th>Subtotal</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in cart_items %}
-                <tr>
-                  <td>{{ item.producto.nombre }}</td>
-                  <td>{{ item.cantidad }}</td>
-                  <td>${{ item.subtotal }}</td>
-                  <td>
-                    <form method="post" style="margin: 0;">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="remove_item">
-                      <input type="hidden" name="producto_id" value="{{ item.producto.id }}">
-                      <button type="submit" class="btn btn-gris">Quitar</button>
+                        <button type="submit" class="producto-card">
+                            <div class="img-wrap">
+                                {% if producto.imagen %}
+                                    <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}">
+                                {% else %}
+                                    <div class="sin-imagen">Sin imagen</div>
+                                {% endif %}
+                            </div>
+                            <div class="contenido">
+                                <div class="nombre">{{ producto.nombre|upper }}</div>
+                                <div class="precio">${{ producto.precio }}</div>
+                            </div>
+                        </button>
                     </form>
-                  </td>
-                </tr>
-              {% empty %}
-                <tr>
-                  <td colspan="4">No hay productos cargados en la venta.</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-
-          <div class="total">Total: ${{ total_carrito }}</div>
-
-          <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="confirm_sale">
-
-            <div class="metodo-pago">
-              <label><strong>Método de pago:</strong></label><br>
-              <select name="metodo_pago">
-                {% for valor, etiqueta in metodos_pago %}
-                  <option value="{{ valor }}">{{ etiqueta }}</option>
+                {% empty %}
+                    <p>No hay productos activos para mostrar en el POS.</p>
                 {% endfor %}
-              </select>
             </div>
-
-            <div class="acciones">
-              <button type="submit" class="btn btn-verde">Confirmar venta</button>
-            </div>
-          </form>
-
-          <form method="post" style="margin-top: 10px;">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="clear_cart">
-            <button type="submit" class="btn btn-rojo">Anular / limpiar venta</button>
-          </form>
         </div>
-      </div>
-    </div>
 
-    <script>
-      document.querySelectorAll(".producto-boton").forEach(function (boton) {
-        const color = boton.dataset.color;
-        if (color && color.trim() !== "") {
-          boton.style.backgroundColor = color;
-        }
-      });
-    </script>
-  </body>
+        <div class="venta-actual">
+            <h2>Venta actual</h2>
+
+            <div class="mensajes">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="mensaje {{ message.tags|default:'info' }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="info-box">
+                {% if casillero %}
+                    <strong>Casillero:</strong> {{ casillero.numero }}<br>
+                    <a href="/pos/?sin_casillero=1">Quitar casillero</a>
+                {% else %}
+                    <strong>Sin casillero seleccionado</strong><br>
+                    <a href="/scan/">Escanear QR de casillero</a>
+                {% endif %}
+            </div>
+
+            <div class="info-box">
+                {% if cliente %}
+                    <strong>Cliente:</strong> {{ cliente.nombre }}<br>
+                    <a href="/pos/?sin_cliente=1">Quitar cliente</a>
+                {% else %}
+                    <strong>Sin cliente seleccionado</strong><br>
+                    <a href="/scan/">Escanear manilla QR</a>
+                {% endif %}
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Detalle</th>
+                        <th>Subtotal</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in cart_items %}
+                        <tr>
+                            <td>
+                                {{ item.producto.nombre }}
+                                {% if item.es_cortesia %}
+                                    <div class="badge">Cortesía</div>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.cantidad }}</td>
+                            <td>
+                                <div class="muted">Bruto: ${{ item.subtotal_bruto }}</div>
+                                <div class="muted">Desc. ítem: ${{ item.valor_descuento_item }}</div>
+
+                                <form method="post" class="linea-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="update_item">
+                                    <input type="hidden" name="producto_id" value="{{ item.producto.id }}">
+
+                                    <input
+                                        type="number"
+                                        name="cantidad"
+                                        min="1"
+                                        value="{{ item.cantidad }}"
+                                        title="Cantidad"
+                                    >
+
+                                    <input
+                                        type="number"
+                                        name="descuento_porcentaje"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        value="{{ item.descuento_porcentaje }}"
+                                        title="Descuento %"
+                                    >
+
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            name="es_cortesia"
+                                            {% if item.es_cortesia %}checked{% endif %}
+                                        >
+                                        Cortesía
+                                    </label>
+
+                                    <button type="submit" class="btn btn-guardar">Guardar</button>
+                                </form>
+                            </td>
+                            <td>${{ item.subtotal }}</td>
+                            <td>
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="remove_item">
+                                    <input type="hidden" name="producto_id" value="{{ item.producto.id }}">
+                                    <button type="submit" class="btn btn-quitar">Quitar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5">No hay productos agregados.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <form method="post" class="descuentos-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="apply_sale_discounts">
+
+                <div class="fila">
+                    <label for="descuento_porcentaje_venta">Descuento general %</label>
+                    <input
+                        type="number"
+                        id="descuento_porcentaje_venta"
+                        name="descuento_porcentaje_venta"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value="{{ descuento_porcentaje_venta }}"
+                    >
+                </div>
+
+                <div class="fila">
+                    <label for="descuento_manual_venta">Descuento general valor</label>
+                    <input
+                        type="number"
+                        id="descuento_manual_venta"
+                        name="descuento_manual_venta"
+                        min="0"
+                        step="0.01"
+                        value="{{ descuento_manual_venta }}"
+                    >
+                </div>
+
+                <button type="submit" class="btn btn-guardar">Aplicar descuentos</button>
+            </form>
+
+            <div class="resumen-box">
+                <div class="resumen-linea">
+                    <span>Subtotal cobrable</span>
+                    <strong>${{ subtotal_cobrable }}</strong>
+                </div>
+                <div class="resumen-linea">
+                    <span>Desc. general %</span>
+                    <strong>${{ valor_descuento_porcentaje_venta }}</strong>
+                </div>
+                <div class="resumen-linea">
+                    <span>Desc. general valor</span>
+                    <strong>${{ descuento_manual_venta }}</strong>
+                </div>
+
+                <div class="total-final">
+                    Total: ${{ total_carrito }}
+                </div>
+            </div>
+
+            <div class="acciones-finales">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="confirm_sale">
+
+                    <div style="margin-bottom:10px;">
+                        <label for="metodo_pago"><strong>Método de pago:</strong></label><br>
+                        <select name="metodo_pago" id="metodo_pago">
+                            {% for valor, texto in metodos_pago %}
+                                <option value="{{ valor }}">{{ texto }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-confirmar">Confirmar venta</button>
+                </form>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="clear_cart">
+                    <button type="submit" class="btn btn-limpiar">Anular / limpiar venta</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
 </html>

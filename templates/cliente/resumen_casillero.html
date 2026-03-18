@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>
+        {% if config_sitio %}
+            {{ config_sitio.nombre_negocio }}
+        {% else %}
+            Casillero asignado
+        {% endif %}
+    </title>
+    <style>
+        :root {
+            --color-primario:
+                {% if config_sitio and config_sitio.color_primario %}
+                    {{ config_sitio.color_primario }}
+                {% else %}
+                    #2563eb
+                {% endif %};
+            --color-secundario:
+                {% if config_sitio and config_sitio.color_secundario %}
+                    {{ config_sitio.color_secundario }}
+                {% else %}
+                    #0f172a
+                {% endif %};
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #111827;
+        }
+
+        .contenedor {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 18px;
+            padding: 28px;
+            text-align: center;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .logo {
+            max-width: 180px;
+            max-height: 80px;
+            object-fit: contain;
+            margin-bottom: 12px;
+        }
+
+        .titulo {
+            font-size: 30px;
+            font-weight: bold;
+            color: var(--color-secundario);
+            margin-bottom: 8px;
+        }
+
+        .mensaje {
+            font-size: 18px;
+            color: #374151;
+            margin-bottom: 24px;
+        }
+
+        .casillero {
+            font-size: 42px;
+            font-weight: bold;
+            color: var(--color-primario);
+            margin-bottom: 18px;
+        }
+
+        .detalle {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            display: inline-block;
+            margin-top: 20px;
+            background: var(--color-primario);
+            color: white;
+            padding: 12px 18px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="contenedor">
+        <div class="card">
+            {% if config_sitio and config_sitio.logo %}
+                <img class="logo" src="{{ config_sitio.logo.url }}" alt="{{ config_sitio.nombre_negocio }}">
+            {% endif %}
+
+            <div class="titulo">
+                {% if config_sitio %}
+                    {{ config_sitio.nombre_negocio }}
+                {% else %}
+                    Casillero asignado
+                {% endif %}
+            </div>
+
+            <div class="mensaje">
+                Tu casillero fue asignado correctamente.
+            </div>
+
+            <div class="casillero">
+                Casillero {{ casillero.numero }}
+            </div>
+
+            <div class="detalle">
+                <strong>Referencia:</strong> {{ venta.cliente_mostrado }}
+            </div>
+
+            <div class="detalle">
+                <strong>Cuenta:</strong> #{{ venta.id }}
+            </div>
+
+            <div class="detalle">
+                Este casillero permanecerá ocupado hasta que la cuenta sea cerrada.
+            </div>
+
+            <a class="btn" href="/cliente/casilleros/">Volver</a>
+        </div>
+    </div>
+</body>
+</html>

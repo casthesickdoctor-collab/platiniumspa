@@ -6,6 +6,10 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from core import views
+from core.casillero_cliente_views import (
+    resumen_casillero_cliente,
+    seleccionar_casillero_cliente,
+)
 
 
 def ping(request):
@@ -22,6 +26,18 @@ urlpatterns = [
     path("clientes/<int:cliente_id>/qr/", views.cliente_qr, name="cliente_qr"),
     path("clientes/<int:cliente_id>/qr-page/", views.cliente_qr_page, name="cliente_qr_page"),
     path("reportes/ventas/", views.reportes_ventas, name="reportes_ventas"),
+
+    # Selección de casillero desde cliente
+    path(
+        "cliente/casilleros/",
+        seleccionar_casillero_cliente,
+        name="cliente_seleccionar_casillero",
+    ),
+    path(
+        "cliente/casilleros/<int:venta_id>/resumen/",
+        resumen_casillero_cliente,
+        name="cliente_resumen_casillero",
+    ),
 ]
 
 if settings.DEBUG:

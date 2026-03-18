@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from io import BytesIO
 
 import qrcode
@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_http_methods
 
-from .models import Cliente, Producto, Venta, VentaItem
+from .models import Casillero, Cliente, Producto, Venta, VentaItem
 
 
 def normalizar_qr(valor):
@@ -25,6 +25,36 @@ def normalizar_qr(valor):
         valor = valor.split("/scan/")[-1]
 
     return valor.strip().strip("/")
+
+
+def extraer_token_casillero(valor):
+    valor = (valor or "").strip()
+
+    if valor.startswith("CASILLERO:") and "|TOKEN:" in valor:
+        return valor.split("|TOKEN:", 1)[1].strip()
+
+    return ""
+
+
+def resolver_qr(valor):
+    valor_original = (valor or "").strip()
+    valor_normalizado = normalizar_qr(valor_original)
+
+    token_casillero = extraer_token_casillero(valor_original)
+    if token_casillero:
+        casillero = Casillero.objects.filter(qr_token=token_casillero).first()
+        if casillero:
+            return "casillero", casillero
+
+    cliente = Cliente.objects.filter(qr_token=valor_normalizado).first()
+    if cliente:
+        return "cliente", cliente
+
+    casillero = Casillero.objects.filter(qr_token=valor_normalizado).first()
+    if casillero:
+        return "casillero", casillero
+
+    return None, None
 
 
 def build_public_url(request, path):
@@ -40,8 +70,21 @@ def asegurar_qr_token(cliente):
     return cliente
 
 
+def parse_decimal_safe(valor, default="0.00"):
+    try:
+        texto = str(valor).replace(",", ".").strip()
+        if not texto:
+            return Decimal(default)
+        return Decimal(texto)
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal(default)
+
+
 def get_cart(request):
-    return request.session.get("pos_cart", {})
+    cart = request.session.get("pos_cart", {})
+    if not isinstance(cart, dict):
+        return {}
+    return cart
 
 
 def save_cart(request, cart):
@@ -52,12 +95,74 @@ def save_cart(request, cart):
 def clear_cart(request):
     if "pos_cart" in request.session:
         del request.session["pos_cart"]
-        request.session.modified = True
+
+    request.session["pos_descuento_porcentaje"] = "0.00"
+    request.session["pos_descuento_manual"] = "0.00"
+    request.session.modified = True
+
+
+def get_sale_discount_porcentaje(request):
+    return parse_decimal_safe(request.session.get("pos_descuento_porcentaje", "0.00"))
+
+
+def get_sale_discount_manual(request):
+    return parse_decimal_safe(request.session.get("pos_descuento_manual", "0.00"))
+
+
+def set_sale_discounts(request, descuento_porcentaje, descuento_manual):
+    request.session["pos_descuento_porcentaje"] = str(descuento_porcentaje)
+    request.session["pos_descuento_manual"] = str(descuento_manual)
+    request.session.modified = True
+
+
+def normalize_cart(cart):
+    cart_normalizado = {}
+
+    for product_id, value in (cart or {}).items():
+        cantidad = 0
+        descuento_porcentaje = Decimal("0.00")
+        es_cortesia = False
+
+        if isinstance(value, int):
+            cantidad = value
+        elif isinstance(value, str):
+            try:
+                cantidad = int(value)
+            except ValueError:
+                cantidad = 0
+        elif isinstance(value, dict):
+            try:
+                cantidad = int(value.get("cantidad", 0))
+            except (TypeError, ValueError):
+                cantidad = 0
+
+            descuento_porcentaje = parse_decimal_safe(
+                value.get("descuento_porcentaje", "0.00")
+            )
+            es_cortesia = bool(value.get("es_cortesia", False))
+
+        if cantidad < 1:
+            continue
+
+        if descuento_porcentaje < 0:
+            descuento_porcentaje = Decimal("0.00")
+        if descuento_porcentaje > 100:
+            descuento_porcentaje = Decimal("100.00")
+
+        cart_normalizado[str(product_id)] = {
+            "cantidad": cantidad,
+            "descuento_porcentaje": str(descuento_porcentaje),
+            "es_cortesia": es_cortesia,
+        }
+
+    return cart_normalizado
 
 
 def build_cart_items(cart):
     items = []
-    total = Decimal("0.00")
+    subtotal_cobrable = Decimal("0.00")
+
+    cart = normalize_cart(cart)
 
     product_ids = []
     for product_id in cart.keys():
@@ -71,7 +176,7 @@ def build_cart_items(cart):
         for producto in Producto.objects.filter(id__in=product_ids)
     }
 
-    for product_id, cantidad in cart.items():
+    for product_id, entry in cart.items():
         try:
             producto = products.get(int(product_id))
         except ValueError:
@@ -80,20 +185,37 @@ def build_cart_items(cart):
         if not producto:
             continue
 
-        cantidad = int(cantidad)
-        subtotal = producto.precio * cantidad
-        total += subtotal
+        cantidad = int(entry.get("cantidad", 1))
+        descuento_porcentaje = parse_decimal_safe(entry.get("descuento_porcentaje", "0.00"))
+        es_cortesia = bool(entry.get("es_cortesia", False))
+
+        subtotal_bruto = (producto.precio or Decimal("0.00")) * cantidad
+
+        if es_cortesia:
+            valor_descuento_item = Decimal("0.00")
+            subtotal = Decimal("0.00")
+        else:
+            valor_descuento_item = (subtotal_bruto * descuento_porcentaje) / Decimal("100.00")
+            subtotal = subtotal_bruto - valor_descuento_item
+            if subtotal < Decimal("0.00"):
+                subtotal = Decimal("0.00")
+
+        subtotal_cobrable += subtotal
 
         items.append(
             {
                 "producto": producto,
                 "cantidad": cantidad,
+                "descuento_porcentaje": descuento_porcentaje,
+                "es_cortesia": es_cortesia,
+                "subtotal_bruto": subtotal_bruto,
+                "valor_descuento_item": valor_descuento_item,
                 "subtotal": subtotal,
             }
         )
 
     items.sort(key=lambda x: (x["producto"].orden_pos, x["producto"].nombre.lower()))
-    return items, total
+    return items, subtotal_cobrable
 
 
 @require_http_methods(["GET", "POST"])
@@ -110,12 +232,30 @@ def pos(request):
         request.session.pop("pos_cliente_id", None)
         request.session.modified = True
 
+    if "casillero" in request.GET:
+        casillero_id = request.GET.get("casillero")
+        if casillero_id:
+            request.session["pos_casillero_id"] = casillero_id
+        else:
+            request.session.pop("pos_casillero_id", None)
+        request.session.modified = True
+
+    if "sin_casillero" in request.GET:
+        request.session.pop("pos_casillero_id", None)
+        request.session.modified = True
+
     cliente = None
     cliente_id = request.session.get("pos_cliente_id")
     if cliente_id:
         cliente = Cliente.objects.filter(id=cliente_id).first()
 
-    cart = get_cart(request)
+    casillero = None
+    casillero_id = request.session.get("pos_casillero_id")
+    if casillero_id:
+        casillero = Casillero.objects.filter(id=casillero_id).first()
+
+    cart = normalize_cart(get_cart(request))
+    save_cart(request, cart)
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -123,15 +263,75 @@ def pos(request):
         if action == "add_product":
             producto_id = request.POST.get("producto_id")
             if producto_id:
-                cart[producto_id] = int(cart.get(producto_id, 0)) + 1
+                entry = cart.get(
+                    str(producto_id),
+                    {
+                        "cantidad": 0,
+                        "descuento_porcentaje": "0.00",
+                        "es_cortesia": False,
+                    },
+                )
+                entry["cantidad"] = int(entry.get("cantidad", 0)) + 1
+                cart[str(producto_id)] = entry
                 save_cart(request, cart)
+            return redirect("pos")
+
+        if action == "update_item":
+            producto_id = request.POST.get("producto_id")
+            if producto_id and str(producto_id) in cart:
+                cantidad = request.POST.get("cantidad", "1")
+                descuento_porcentaje = request.POST.get("descuento_porcentaje", "0.00")
+                es_cortesia = request.POST.get("es_cortesia") == "on"
+
+                try:
+                    cantidad = int(cantidad)
+                except ValueError:
+                    cantidad = 1
+
+                if cantidad < 1:
+                    cantidad = 1
+
+                descuento_porcentaje = parse_decimal_safe(descuento_porcentaje, "0.00")
+                if descuento_porcentaje < 0:
+                    descuento_porcentaje = Decimal("0.00")
+                if descuento_porcentaje > 100:
+                    descuento_porcentaje = Decimal("100.00")
+
+                cart[str(producto_id)] = {
+                    "cantidad": cantidad,
+                    "descuento_porcentaje": str(descuento_porcentaje),
+                    "es_cortesia": es_cortesia,
+                }
+                save_cart(request, cart)
+
             return redirect("pos")
 
         if action == "remove_item":
             producto_id = request.POST.get("producto_id")
-            if producto_id and producto_id in cart:
-                del cart[producto_id]
+            if producto_id and str(producto_id) in cart:
+                del cart[str(producto_id)]
                 save_cart(request, cart)
+            return redirect("pos")
+
+        if action == "apply_sale_discounts":
+            descuento_porcentaje = parse_decimal_safe(
+                request.POST.get("descuento_porcentaje_venta", "0.00"),
+                "0.00",
+            )
+            descuento_manual = parse_decimal_safe(
+                request.POST.get("descuento_manual_venta", "0.00"),
+                "0.00",
+            )
+
+            if descuento_porcentaje < 0:
+                descuento_porcentaje = Decimal("0.00")
+            if descuento_porcentaje > 100:
+                descuento_porcentaje = Decimal("100.00")
+            if descuento_manual < 0:
+                descuento_manual = Decimal("0.00")
+
+            set_sale_discounts(request, descuento_porcentaje, descuento_manual)
+            messages.success(request, "Descuentos de la venta actualizados.")
             return redirect("pos")
 
         if action == "clear_cart":
@@ -140,7 +340,7 @@ def pos(request):
             return redirect("pos")
 
         if action == "confirm_sale":
-            cart_items, total_carrito = build_cart_items(cart)
+            cart_items, subtotal_cobrable = build_cart_items(cart)
 
             if not cart_items:
                 messages.error(request, "No hay productos en la venta actual.")
@@ -157,27 +357,31 @@ def pos(request):
                     return redirect("pos")
 
             metodo_pago = request.POST.get("metodo_pago", Venta.MetodoPago.EFECTIVO)
+            descuento_porcentaje_venta = get_sale_discount_porcentaje(request)
+            descuento_manual_venta = get_sale_discount_manual(request)
 
             venta = Venta.objects.create(
+                casillero=casillero,
                 cliente=cliente,
                 estado=Venta.Estado.PAGADA,
                 metodo_pago=metodo_pago,
+                descuento_porcentaje=descuento_porcentaje_venta,
+                descuento_manual=descuento_manual_venta,
             )
 
             for item in cart_items:
                 producto = item["producto"]
-                cantidad = item["cantidad"]
 
                 VentaItem.objects.create(
                     venta=venta,
                     producto=producto,
-                    cantidad=cantidad,
+                    cantidad=item["cantidad"],
                     precio_unitario=producto.precio,
+                    descuento_porcentaje=item["descuento_porcentaje"],
+                    es_cortesia=item["es_cortesia"],
                 )
 
-                if producto.controlar_stock:
-                    producto.stock -= cantidad
-                    producto.save(update_fields=["stock"])
+            venta.recalcular_total()
 
             clear_cart(request)
             messages.success(request, f"Venta #{venta.id} creada correctamente.")
@@ -189,7 +393,17 @@ def pos(request):
         .order_by("categoria__orden", "orden_pos", "nombre")
     )
 
-    cart_items, total_carrito = build_cart_items(cart)
+    cart_items, subtotal_cobrable = build_cart_items(cart)
+
+    descuento_porcentaje_venta = get_sale_discount_porcentaje(request)
+    descuento_manual_venta = get_sale_discount_manual(request)
+    valor_descuento_porcentaje_venta = (
+        subtotal_cobrable * descuento_porcentaje_venta
+    ) / Decimal("100.00")
+
+    total_carrito = subtotal_cobrable - valor_descuento_porcentaje_venta - descuento_manual_venta
+    if total_carrito < Decimal("0.00"):
+        total_carrito = Decimal("0.00")
 
     return render(
         request,
@@ -197,7 +411,12 @@ def pos(request):
         {
             "productos": productos,
             "cliente": cliente,
+            "casillero": casillero,
             "cart_items": cart_items,
+            "subtotal_cobrable": subtotal_cobrable,
+            "descuento_porcentaje_venta": descuento_porcentaje_venta,
+            "descuento_manual_venta": descuento_manual_venta,
+            "valor_descuento_porcentaje_venta": valor_descuento_porcentaje_venta,
             "total_carrito": total_carrito,
             "metodos_pago": Venta.MetodoPago.choices,
         },
@@ -209,21 +428,31 @@ def scan_qr(request):
     error = None
 
     if request.method == "POST":
-        token = normalizar_qr(request.POST.get("token"))
-        cliente = Cliente.objects.filter(qr_token=token).first()
+        token = request.POST.get("token")
+        tipo, entidad = resolver_qr(token)
 
-        if cliente:
-            return redirect(f"/pos/?cliente={cliente.id}")
+        if tipo == "cliente" and entidad:
+            return redirect(f"/pos/?cliente={entidad.id}")
 
-        error = "No se encontro un cliente con ese QR."
+        if tipo == "casillero" and entidad:
+            return redirect(f"/pos/?casillero={entidad.id}")
+
+        error = "No se encontró un cliente o casillero con ese QR."
 
     return render(request, "core/scan_qr.html", {"error": error})
 
 
 def scan_qr_token(request, token):
-    token = normalizar_qr(token)
-    cliente = get_object_or_404(Cliente, qr_token=token)
-    return redirect(f"/pos/?cliente={cliente.id}")
+    tipo, entidad = resolver_qr(token)
+
+    if tipo == "cliente" and entidad:
+        return redirect(f"/pos/?cliente={entidad.id}")
+
+    if tipo == "casillero" and entidad:
+        return redirect(f"/pos/?casillero={entidad.id}")
+
+    messages.error(request, "No se encontró un cliente o casillero con ese QR.")
+    return redirect("scan_qr")
 
 
 def cliente_qr(request, cliente_id):

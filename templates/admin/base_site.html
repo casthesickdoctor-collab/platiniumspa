@@ -1,0 +1,148 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}
+{% if config_sitio %}
+  {{ config_sitio.nombre_negocio }} | Administración
+{% else %}
+  Administración
+{% endif %}
+{% endblock %}
+
+{% block extrastyle %}
+<style>
+  :root {
+    --color-primario:
+      {% if config_sitio and config_sitio.color_primario %}
+        {{ config_sitio.color_primario }}
+      {% else %}
+        #2563eb
+      {% endif %};
+
+    --color-secundario:
+      {% if config_sitio and config_sitio.color_secundario %}
+        {{ config_sitio.color_secundario }}
+      {% else %}
+        #0f4c81
+      {% endif %};
+  }
+
+  #header {
+    background: var(--color-secundario) !important;
+    color: white !important;
+  }
+
+  #site-name a,
+  #user-tools,
+  #user-tools a {
+    color: white !important;
+  }
+
+  .button,
+  input[type="submit"],
+  input[type="button"],
+  .submit-row input,
+  .btn-primario {
+    background: var(--color-primario) !important;
+    border-color: var(--color-primario) !important;
+    color: white !important;
+  }
+
+  a {
+    color: var(--color-primario);
+  }
+
+  .module h2,
+  .module caption,
+  .inline-group h2 {
+    background: var(--color-secundario) !important;
+  }
+</style>
+{% endblock %}
+
+{% block branding %}
+<div style="display:flex; align-items:center; gap:12px;">
+  <a
+    href="{% url 'admin:index' %}"
+    style="display:flex; align-items:center; gap:12px; text-decoration:none;"
+  >
+    {% if config_sitio and config_sitio.logo %}
+      <img
+        src="{{ config_sitio.logo.url }}"
+        alt="{{ config_sitio.nombre_negocio }}"
+        style="height:48px; max-width:180px; object-fit:contain; border-radius:8px;"
+      >
+    {% endif %}
+
+    <span style="font-size:30px; font-weight:600; color:white;">
+      {% if config_sitio %}
+        {{ config_sitio.nombre_negocio }}
+      {% else %}
+        Administración del sistema
+      {% endif %}
+    </span>
+  </a>
+</div>
+{% endblock %}
+
+{% block nav-global %}
+<div style="display:flex; gap:10px; align-items:center; padding:8px 0;">
+  <a
+    href="/pos/"
+    style="
+      background:var(--color-primario);
+      color:white;
+      padding:8px 14px;
+      border-radius:8px;
+      text-decoration:none;
+      font-weight:bold;
+    "
+  >
+    Venta directa
+  </a>
+
+  <a
+    href="/reportes/ventas/"
+    style="
+      background:var(--color-primario);
+      color:white;
+      padding:8px 14px;
+      border-radius:8px;
+      text-decoration:none;
+      font-weight:bold;
+    "
+  >
+    Reportes
+  </a>
+
+  <a
+    href="/scan/"
+    style="
+      background:var(--color-primario);
+      color:white;
+      padding:8px 14px;
+      border-radius:8px;
+      text-decoration:none;
+      font-weight:bold;
+    "
+  >
+    Escanear QR
+  </a>
+
+  {% if request.user.is_superuser %}
+    <a
+      href="/admin/core/configuracionsitio/"
+      title="Configuración del sitio"
+      style="
+        margin-left:8px;
+        font-size:22px;
+        text-decoration:none;
+        color:white;
+        opacity:0.85;
+      "
+    >
+      ⚙
+    </a>
+  {% endif %}
+</div>
+{% endblock %}
